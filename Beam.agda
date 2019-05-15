@@ -2,6 +2,7 @@
 module Beam where
 
 open import Base
+open import Dependence
 
 open import Cubical.HITs.PropositionalTruncation
 open import Cubical.Data.Prod
@@ -24,19 +25,16 @@ fromVec = Vec.lookup
 DoFn : (T : Type₀) {J : T → Type₀} (U : Type₀) → Type₀
 DoFn T {J} U = (t : T) → J t → U
 
-_parDo_ : (ct : PCollection {I} T)
+_parDo_ : (c : PCollection {I} T)
         → DoFn T {J} U
-        → PCollection {Σ I λ i → J (ct i)} U
-_parDo_ ct fn (i , j) = fn (ct i) j
+        → PCollection {Σ I λ i → J (c i)} U
+_parDo_ c fn (i , j) = fn (c i) j
 
 flatten : ∀ {I₁ I₂}
         → PCollection {I₁} T → PCollection {I₂} T
         → PCollection {I₁ ⊎ I₂} T
 flatten l r (inl x) = l x
 flatten l r (inr x) = r x
-
-Fiber : (I → K) → Type₀
-Fiber {I} {K} f = Σ K λ k → Σ I λ i → f i ≡ k
 
 groupByKey : (c : PCollection {I} (K × T))
           → PCollection {Fiber (proj₁ ∘ c)} T
@@ -47,6 +45,11 @@ combinePerKey : {L : K → Type₀} (c : PCollection {Σ K L} T)
               → (T → T → T)
               → PCollection {Σ K λ k → ∥ L k ∥} T
 combinePerKey c _•_ (k , ∣l∣) = {!   !}
+
+module DepRels where
+  open import Dependence
+  parDoDepRel : (fn : DoFn T {J} U) {{_ : Eq I}} (c : PCollection {I} T)
+                (i : I) (j : Σ I λ i → J (c i)) → DepRel (c parDo fn) i j
 
 module Examples where
   open import Data.Char
