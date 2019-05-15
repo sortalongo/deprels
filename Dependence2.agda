@@ -4,6 +4,8 @@ open import Agda.Builtin.Equality
 open import Agda.Primitive using (Level; lsuc)
 open import Data.Unit
 open import Data.Product
+open import Data.Sum
+open import Function using (_∘_; _$_)
 open import Relation.Nullary
 
 Type = Set
@@ -56,15 +58,8 @@ record DepRelRecord {{_ : Eq I}} (op : (c : I → T) → J c → U) (c : I → T
     J-equal : Dec ((J c → U) ≡ (J c-sub → U)) -- TODO: only require equality between J c and J c-sub
     Depend? : somehowCompare (λ d₁ d₂ → d₁ j ≢ d₂ j) (op c) (op c-sub) J-equal
 
--- IGNORE BELOW
-
--- Whether two terms of possibly-different types are different.
-somehowDistinct : T → U → Dec (T ≡ U) → Type
-somehowDistinct = somehowCompare _≢_
-
-data DepRelData : {A : Type} {B : A → Type} (f : (a : A) → B a) → Type₁ where
-  unindexed : (f : (c : C) → D c) (c : C)
-            → Σ[ c' ∈ C ] ∃ (somehowDistinct (f c) (f c')) → DepRelData f
-  indexedInput : (f : (c : I → T) → J c → U) (c : I → T) (i : I) {{_ : Eq I}} (j : J c)
-               → Σ[ t ∈ T ] ∃ (somehowCompare (λ d₁ d₂ → d₁ j ≢ d₂ j) (f c) (f (substitute c i t)))
-               → DepRelData f
+DepRelMapped : {{_ : Eq I}} → (op : (c : I → T) → J c → U) (c : I → T) → I → J c → Type
+DepRelMapped {T = T} {J = J} op c i j = Σ[ t ∈ T ] let
+    c-sub = substitute c i t
+    -- Jor⊤ = J c-sub ⊎ ⊤
+  in Σ[ mapⱼ ∈ (J c → J c-sub) ] op c j ≢ op c-sub (mapⱼ j)
