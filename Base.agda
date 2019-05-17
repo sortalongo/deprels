@@ -1,13 +1,14 @@
 module Base where
 
-open import Agda.Builtin.Equality public
+open import Relation.Binary.PropositionalEquality using (_≡_; refl; _≢_) public
 open import Agda.Primitive using (Level; lsuc) public
-open import Data.Unit using (⊤; tt) public
-open import Data.Product using (Σ; Σ-syntax; ∃) public
+open import Data.Unit using (⊤) renaming (tt to unit) public
+open import Data.Product using (Σ; Σ-syntax; ∃; ∃₂; _×_; _,_) public
 open import Data.Empty using (⊥) public
 open import Function using (_∘_; _$_) public
 open import Relation.Nullary using (Dec; yes; no; ¬_) public
 
+-- Agda's `Set` sorts are confusingly named. Define new names to reduce that.
 Type = Set
 Type₁ = Set₁
 
@@ -20,23 +21,24 @@ private
     T : Type- ℓ
     I K : Type
 
-Fiber : (I → K) → Type
-Fiber {I} {K} f = Σ K λ k → Σ I λ i → f i ≡ k
+-- The pairs of a function's domain and codomain.
+FuncPairs : (I → K) → Type
+FuncPairs {I} {K} f = ∃₂ λ k i → f i ≡ k
 
+-- Squashes all terms in A into a single term using "irrelevance", roughly as if
+-- all terms were made equal to each other. Squashed terms can't be unsquashed.
 data Squash (A : Type- ℓ) : Type- ℓ where
   squash : .A → Squash A
 
 ∣_∣ = Squash
 
-infix 2 _≢_
-_≢_ : {A : Type} → A → A → Type
-_≢_ a a' = ¬ (a ≡ a')
-
+-- A typeclass for decidable equality.
 record Eq (A : Type- ℓ) : Type- ℓ where
   constructor mkEq
   field
     eq? : (x y : A) → Dec (x ≡ y)
 
+-- Syntax for decidable equality.
 _==_ : {{eq : Eq T}} (t t' : T) → Dec (t ≡ t')
 _==_ {{eq}} t t' = Eq.eq? eq t t'
 
