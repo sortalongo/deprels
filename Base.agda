@@ -3,9 +3,10 @@ module Base where
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; _≢_) public
 open import Agda.Primitive using (Level; lsuc) public
 open import Data.Unit using (⊤) renaming (tt to unit) public
+open import Data.Maybe using (Maybe; just; nothing; maybe) public
 open import Data.Product using (Σ; Σ-syntax; ∃; ∃₂; _×_; _,_) public
 open import Data.Empty using (⊥) public
-open import Function using (_∘_; _$_) public
+open import Function using (_∘_; _$_; id) public
 open import Relation.Nullary using (Dec; yes; no; ¬_) public
 
 -- Agda's `Set` sorts are confusingly named. Define new names to reduce that.
@@ -45,3 +46,7 @@ _==_ {{eq}} t t' = Eq.eq? eq t t'
 instance
   unitEq : Eq ⊤
   unitEq = record { eq? = λ tt tt → yes refl }
+
+-- Readable syntax for `maybe`.
+_map_or_ : ∀ {a b} {A : Set a} {B : Set b} → Maybe A → (A → B) → B → B
+_map_or_ ma f b = maybe f b ma

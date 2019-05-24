@@ -44,9 +44,10 @@ combinePerKey : {L : K → Type} (c : PCollection {Σ K L} T)
               → PCollection {Σ K λ k → ∣ L k ∣ } T
 combinePerKey c _•_ (k , ∣l∣) = {!   !}
 
-module DepRels where
-
-  --parDoDepRel : (fn : DoFn T {J} U) {{_ : Eq I}} (c : PCollection {I} T)
+module DepRels {{_ : Eq I}} where
+  -- TODO: define deprels for Beam constructs.
+  -- DoFnDepRel : (fn : DoFn T {J} U) → Nonconstant fn
+  -- parDoDepRel : (fn : DoFn T {J} U) {{_ : Eq I}} (c : PCollection {I} T)
   --              (i : I) (j : Σ I λ i → J (c i)) → DepRel (c parDo fn) i j
 
 module Examples where
