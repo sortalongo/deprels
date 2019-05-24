@@ -40,7 +40,7 @@ module _ {T U : Type} (f : T → U) where
 Nonconstant-from-DepRel : {T U : Type} {op : (⊤ →? T) → (⊤ →? U)}
                         → DepRel op unit unit → Nonconstant (λ t → op (λ _ → t))
 Nonconstant-from-DepRel deprel t with deprel λ _ → t
-Nonconstant-from-DepRel deprel t | (t? , t-neq) = (t? , unit-injective t-neq)
+Nonconstant-from-DepRel deprel t | (t? , t-neq) = (t? , unit-elim t-neq)
   where
-  unit-injective : {A : Type} {f f' : ⊤ → A} → f unit ≢ f' unit → f ≢ f'
-  unit-injective f-neq f-eq rewrite f-eq = f-neq refl
+  unit-elim : {A : Type} {f f' : ⊤ → A} → f unit ≢ f' unit → f ≢ f'
+  unit-elim f-neq f-eq rewrite f-eq = f-neq refl
