@@ -1,5 +1,7 @@
 open import Base
 
+-- Defines dependence as a relation between input and output elements of a
+-- transformation.
 module Dependence where
 
 module _ {I T U : Type}
@@ -26,6 +28,11 @@ module _ {I T U : Type}
     -- can return `nothing`, in which case the dependence is assumed. This
     -- conservative assumption leads to dependence being _opt out_: a pair can
     -- only be made independent by providing an example, `t`, and a conversion
+    --
+    -- Unfortunately, the definition is overly permissive. `convertⱼ` can be
+    -- chosen so that dependent indices are made to appear independent. This
+    -- must be solved before moving on to analyze the dep-rels of particular
+    -- computational models.
     DepRel : I → J c → Type
     DepRel i j =
       Σ[ t ∈ T ]
