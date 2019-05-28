@@ -1,11 +1,10 @@
 module Beam where
 
 open import Base
-open import Dependence
+--open import Dependence
 
 open import Data.Product
 open import Data.Sum
-open import Data.Nat using (ℕ)
 open import Data.Vec as Vec using (Vec)
 
 private
