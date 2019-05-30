@@ -2,7 +2,7 @@ module Base where
 
 open import Agda.Primitive using (Level; lsuc) public
 open import Data.Unit using (⊤) renaming (tt to unit) public
-open import Data.Maybe using (just; nothing) renaming (Maybe to ¿_) public
+open import Data.Maybe using (just; nothing; fromMaybe) renaming (Maybe to ¿_) public
 module Maybe = Data.Maybe
 open import Data.Nat using (ℕ; _+_) public
 module Nat = Data.Nat

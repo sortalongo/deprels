@@ -52,7 +52,7 @@ Nonconstant-from-DepRel deprel t | (t? , t-neq) = (t? , unit-elim t-neq)
 
 private
   module Examples where
-    open import Data.Fin using (Fin)
+    open import Data.Fin as Fin using (Fin)
     open import Data.Vec as Vec using (Vec; _∷_; [])
 
     -- An example operation:
@@ -60,7 +60,7 @@ private
     -- We define the operation and provide a decidable dep-rel for it.
     -- Then, we use the operation on a few different collections.
     module AddOneToEach {I : Type} where
-      op : (c : I →? ℕ) → I →? ℕ
+      op : (I →? ℕ) → I →? ℕ
       op c i = Maybe.map (_+_ 1) (c i)
 
       module _ {{_ : Eq I}} where
@@ -95,8 +95,8 @@ private
     egFin = just ∘ Vec.lookup (2 ∷ 1 ∷ 0 ∷ [])
     egFin+1 = AddOneToEach.op egFin
     -- Prove that each element in the produced collection matches expectations.
-    egFin-test : (i : _) → egFin+1 i ≡ Maybe.map Nat.suc (egFin i)
-    egFin-test i = refl
+    egFin+1-test : (i : _) → egFin+1 i ≡ Maybe.map Nat.suc (egFin i)
+    egFin+1-test i = refl
 
     -- An infinite collection.
     eg∞ : ℕ →? ℕ
@@ -105,3 +105,22 @@ private
     -- Prove that each element in the produced collection matches expectations.
     eq∞-test : (i : ℕ) → eg∞+1 i ≡ Maybe.map Nat.suc (eg∞ i)
     eq∞-test i = refl
+
+    -- A sum operator that takes the sum of a finite set of natural numbers.
+    module Sum {max : ℕ} where
+      I = Fin (1 + max)
+      op : (I →? ℕ) → ⊤ →? ℕ
+      op c _ = just $ prefixSum max (Fin.fromℕ max)
+        where
+        c|0 = fromMaybe 0 ∘ c
+        -- Use a dummy for termination checker because pattern matching on a
+        -- `Fin (suc n)` changes the type to `Fin n`, which is annoying.
+        prefixSum : (dummy : ℕ) → I → ℕ
+        prefixSum (Nat.zero) i = c|0 i
+        prefixSum (Nat.suc dummy) i = c|0 i + prefixSum dummy (Fin.pred i)
+
+      -- TODO: define deprel for Sum.
+
+    egFinSum = Sum.op egFin
+    egFinSum-test : egFinSum unit ≡ just 3
+    egFinSum-test = refl
