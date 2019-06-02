@@ -9,15 +9,12 @@ open import Base
 -- output type family (where nonexistent terms are mapped to `nothing`).
 module DependenceMaybe where
 
-_→?_ : (I T : Type) → Type
-I →? T = I → ¿ T
-
 -- DepRel definition.
 module _ {I T J U : Type} {{_ : Eq I}}
-         (op : (I →? T) → (J →? U)) where
+         (op : (I → T) → (J → U)) where
   private
     -- Replaces the value mapped by `i₀` with `t₀`.
-    substitute : (I →? T) → I → ¿ T → I →? T
+    substitute : (I → T) → I → T → I → T
     substitute f i₀ t₀ i with i₀ == i
     ...                     | yes _ = t₀
     ...                     | no _  = f i
@@ -27,7 +24,7 @@ module _ {I T J U : Type} {{_ : Eq I}}
   -- there exists a `t` such that substituting it for `c i` produces a different
   -- value at `op c j`.
   DepRel : I → J → Type
-  DepRel i j = (c : I →? T) → Σ[ t ∈ ¿ T ] op c j ≢ (op (substitute c i t)) j
+  DepRel i j = (c : I → T) → Σ[ t ∈ T ] op c j ≢ (op (substitute c i t)) j
 
   -- Useful DepRels must be decidable: that is, we must be able to prove that
   -- every `(i, j)` is either in or not in the relation.
@@ -42,10 +39,10 @@ module _ {T U : Type} (f : T → U) where
 
 -- Proves that a DepRel for an `op : (⊤ →? T) → (⊤ →? U)` can be converted into
 -- a claim of whether a function `T →? U` is constant.
-Nonconstant-from-DepRel : {T U : Type} {op : (⊤ →? T) → (⊤ →? U)}
+Nonconstant-from-DepRel : {T U : Type} {op : (⊤ → T) → (⊤ → U)}
                         → DepRel op unit unit → Nonconstant (λ t → op (λ _ → t))
 Nonconstant-from-DepRel deprel t with deprel λ _ → t
-Nonconstant-from-DepRel deprel t | (t? , t-neq) = (t? , unit-elim t-neq)
+Nonconstant-from-DepRel deprel t | (t' , t-neq) = (t' , unit-elim t-neq)
   where
   unit-elim : {A : Type} {f f' : ⊤ → A} → f unit ≢ f' unit → f ≢ f'
   unit-elim f-neq f-eq rewrite f-eq = f-neq refl
@@ -60,8 +57,8 @@ private
     -- We define the operation and provide a decidable dep-rel for it.
     -- Then, we use the operation on a few different collections.
     module AddOneToEach {I : Type} where
-      op : (I →? ℕ) → I →? ℕ
-      op c i = Maybe.map (_+_ 1) (c i)
+      op : (I → ℕ) → I → ℕ
+      op c i = 1 + c i
 
       module _ {{_ : Eq I}} where
         op-DepRel = DepRel {I} op
@@ -76,14 +73,14 @@ private
           where
           Dependent : DepRel op i i
           Dependent c with c i | i == i
-          Dependent c | just x | yes _ = nothing , λ()
-          Dependent c | just x | no i≢i = nothing , λ _ → i≢i refl
-          Dependent c | nothing | yes _ = just 0 , λ ()
-          Dependent c | nothing | no i≢i = just 0 , λ _ → i≢i refl
+          Dependent c | 0 | yes _ = 1 , λ()
+          Dependent c | 0 | no i≢i = 1 , λ _ → i≢i refl
+          Dependent c | Nat.suc n | yes _ = 0 , λ ()
+          Dependent c | Nat.suc n | no i≢i = 0 , λ _ → i≢i refl
         op-DecidableDepRel i j | no j≢i = no Independent
           where
-          c : I →? ℕ
-          c i = just 0
+          c : I → ℕ
+          c i = 0
           Independent : ¬ (DepRel op i j)
           Independent deprel with deprel c
           Independent deprel | _ , _ with i == j
@@ -91,36 +88,35 @@ private
           Independent deprel | _ , 1≡1 | no ¬p = 1≡1 refl
 
     -- A collection of 3 elements.
-    egFin : Fin 3 →? ℕ
-    egFin = just ∘ Vec.lookup (2 ∷ 1 ∷ 0 ∷ [])
+    egFin : Fin 3 → ℕ
+    egFin = Vec.lookup (2 ∷ 1 ∷ 0 ∷ [])
     egFin+1 = AddOneToEach.op egFin
     -- Prove that each element in the produced collection matches expectations.
-    egFin+1-test : (i : _) → egFin+1 i ≡ Maybe.map Nat.suc (egFin i)
+    egFin+1-test : (i : _) → egFin+1 i ≡ Nat.suc (egFin i)
     egFin+1-test i = refl
 
     -- An infinite collection.
-    eg∞ : ℕ →? ℕ
-    eg∞ n = just n
+    eg∞ : ℕ → ℕ
+    eg∞ n = n
     eg∞+1 = AddOneToEach.op eg∞
     -- Prove that each element in the produced collection matches expectations.
-    eq∞-test : (i : ℕ) → eg∞+1 i ≡ Maybe.map Nat.suc (eg∞ i)
+    eq∞-test : (i : ℕ) → eg∞+1 i ≡ Nat.suc (eg∞ i)
     eq∞-test i = refl
 
     -- A sum operator that takes the sum of a finite set of natural numbers.
     module Sum {max : ℕ} where
       I = Fin (1 + max)
-      op : (I →? ℕ) → ⊤ →? ℕ
-      op c _ = just $ prefixSum max (Fin.fromℕ max)
+      op : (I → ℕ) → ⊤ → ℕ
+      op c _ = prefixSum max (Fin.fromℕ max)
         where
-        c|0 = fromMaybe 0 ∘ c
         -- Use a dummy for termination checker because pattern matching on a
         -- `Fin (suc n)` changes the type to `Fin n`, which is annoying.
         prefixSum : (dummy : ℕ) → I → ℕ
-        prefixSum (Nat.zero) i = c|0 i
-        prefixSum (Nat.suc dummy) i = c|0 i + prefixSum dummy (Fin.pred i)
+        prefixSum (Nat.zero) i = c i
+        prefixSum (Nat.suc dummy) i = c i + prefixSum dummy (Fin.pred i)
 
       -- TODO: define deprel for Sum.
 
     egFinSum = Sum.op egFin
-    egFinSum-test : egFinSum unit ≡ just 3
+    egFinSum-test : egFinSum unit ≡ 3
     egFinSum-test = refl
