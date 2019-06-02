@@ -10,42 +10,40 @@ open import Base
 module Dependence where
 
 -- DepRel definition.
-module _ {I T J U : Type} {{_ : Eq I}}
-         (op : (I → T) → (J → U)) where
-  private
-    -- Replaces the value mapped by `i₀` with `t₀`.
-    substitute : (I → T) → I → T → I → T
-    substitute f i₀ t₀ i with i₀ == i
-    ...                     | yes _ = t₀
-    ...                     | no _  = f i
+module _ {I T : Type} {{_ : Eq I}} where
+  -- Replaces the value mapped by `i₀` with `t₀`.
+  substitute : (I → T) → I → T → I → T
+  substitute f i₀ t₀ i with i₀ == i
+  ...                     | yes _ = t₀
+  ...                     | no _  = f i
 
-  -- A DepRel is a heterogeneous binary relation between I and J over some
-  -- operation. The pair (i, j) is in the relation iff, for all collections `c`,
-  -- there exists a `t` such that substituting it for `c i` produces a different
-  -- value at `op c j`.
-  DepRel : I → J → Type
-  DepRel i j = (c : I → T) → Σ[ t ∈ T ] op c j ≢ (op (substitute c i t)) j
+  module _  {J U : Type} (op : (I → T) → (J → U)) where
+    -- A DepRel is a heterogeneous binary relation between I and J over some
+    -- operation. The pair (i, j) is in the relation iff, for all collections `c`,
+    -- there exists a `t` such that substituting it for `c i` produces a different
+    -- value at `op c j`.
+    DepRel : I → J → Type
+    DepRel i j = (c : I → T) → Σ[ t ∈ T ] op c j ≢ (op (substitute c i t)) j
 
-  -- Useful DepRels must be decidable: that is, we must be able to prove that
-  -- every `(i, j)` is either in or not in the relation.
-  DecidableDepRel = Decidable DepRel
+
+    -- Useful DepRels must be decidable: that is, we must be able to prove that
+    -- every `(i, j)` is either in or not in the relation.
+    DecidableDepRel = Decidable DepRel
 
 -- A function that is not constant can be thought of as an operator with ⊤ as
 -- the input and output indexes. We define this property and prove this
 -- relationship below.
-module _ {T U : Type} (f : T → U) where
-  Nonconstant : Type
-  Nonconstant = (t : T) → Σ[ t' ∈ T ] f t ≢ f t'
+module _ {T U : Type} where
+  Nonconstant : (f : T → U) → Type
+  Nonconstant f = (t : T) → Σ[ t' ∈ T ] f t ≢ f t'
 
--- Proves that a DepRel for an `op : (⊤ →? T) → (⊤ →? U)` can be converted into
--- a claim of whether a function `T →? U` is constant.
-Nonconstant-from-DepRel : {T U : Type} {op : (⊤ → T) → (⊤ → U)}
-                        → DepRel op unit unit → Nonconstant (λ t → op (λ _ → t))
-Nonconstant-from-DepRel deprel t with deprel λ _ → t
-Nonconstant-from-DepRel deprel t | (t' , t-neq) = (t' , unit-elim t-neq)
-  where
-  unit-elim : {A : Type} {f f' : ⊤ → A} → f unit ≢ f' unit → f ≢ f'
-  unit-elim f-neq f-eq rewrite f-eq = f-neq refl
+  -- Proves that a DepRel for an `op : (⊤ → T) → (⊤ → U)` can be converted into
+  -- a claim of whether a function `T → U` is constant.
+  Nonconstant-from-DepRel : {op : (⊤ → T) → (⊤ → U)} → DepRel op unit unit
+                          → Nonconstant (λ t → op (λ _ → t) unit)
+  Nonconstant-from-DepRel deprel t = deprel λ _ → t
+
+  -- TODO: prove converse claim to make a bijection.
 
 private
   module Examples where
@@ -105,17 +103,39 @@ private
 
     -- A sum operator that takes the sum of a finite set of natural numbers.
     module Sum {max : ℕ} where
-      I = Fin (1 + max)
-      op : (I → ℕ) → ⊤ → ℕ
-      op c _ = prefixSum max (Fin.fromℕ max)
-        where
-        -- Use a dummy for termination checker because pattern matching on a
-        -- `Fin (suc n)` changes the type to `Fin n`, which is annoying.
-        prefixSum : (dummy : ℕ) → I → ℕ
-        prefixSum (Nat.zero) i = c i
-        prefixSum (Nat.suc dummy) i = c i + prefixSum dummy (Fin.pred i)
 
-      -- TODO: define deprel for Sum.
+        I = Fin (1 + max)
+
+        op : (I → ℕ) → ⊤ → ℕ
+        op c _ = prefixSum max (Fin.fromℕ max)
+          module _ where
+          -- Use a counter for termination checker because pattern matching on a
+          -- `Fin (suc n)` changes the type to `Fin n`, which isn't what we want.
+          prefixSum : (counter : ℕ) → I → ℕ
+          prefixSum Nat.zero i = c i
+          prefixSum (Nat.suc n) i = c i + prefixSum n (Fin.pred i)
+
+        module _ {{_ : Eq I}} where
+          op-DepRel = DepRel {I} op
+
+          -- In Sum.op, `j` always depends on `i` .
+          -- We prove this by computing a `yes _` for all `i`.
+          op-DecidableDepRel : DecidableDepRel {I} op
+          op-DecidableDepRel i unit = yes Dependent
+            where
+            -- Lemma for recursing on prefixSum.
+            substituted-prefixSum-distinct :
+                  (i max' : I) (c : I → ℕ) (n n' : ℕ) → n ≢ n' →
+                  prefixSum c unit (Fin.toℕ max') max' ≢ prefixSum (substitute c i n') unit (Fin.toℕ max') max'
+            substituted-prefixSum-distinct i max' c n n' n≢n' = {!   !}
+
+            import Data.Fin.Properties as Finₚ
+            Dependent : DepRel op i unit
+            Dependent c with c i
+            Dependent c | ℕ.zero with substituted-prefixSum-distinct i (Fin.fromℕ max) c 0 1 λ()
+            Dependent _ | _ | distinct rewrite Finₚ.toℕ-fromℕ max = 1 , distinct
+            Dependent c | ℕ.suc n with substituted-prefixSum-distinct i (Fin.fromℕ max) c (ℕ.suc n) 0 λ()
+            Dependent _ | _ | distinct rewrite Finₚ.toℕ-fromℕ max = 0 , distinct
 
     egFinSum = Sum.op egFin
     egFinSum-test : egFinSum unit ≡ 3
