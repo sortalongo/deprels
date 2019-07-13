@@ -103,40 +103,40 @@ private
 
     -- A sum operator that takes the sum of a finite set of natural numbers.
     module Sum {max : ℕ} where
+        open Nat using (_≟_; _≤_; _<_; z≤n; s≤s; suc)
+        open import Data.Nat.Properties using (≤-step; ≤-refl)
 
-        I = Fin (1 + max)
+        I = ∃ λ i → i ≤ max
 
         op : (I → ℕ) → ⊤ → ℕ
-        op c _ = prefixSum max (Fin.fromℕ max)
+        op c _ = prefixSum≤ max ≤-refl
           module _ where
-          -- Use a counter for termination checker because pattern matching on a
-          -- `Fin (suc n)` changes the type to `Fin n`, which isn't what we want.
-          prefixSum : (counter : ℕ) → I → ℕ
-          prefixSum Nat.zero i = c i
-          prefixSum (Nat.suc n) i = c i + prefixSum n (Fin.pred i)
+          prefixSum≤ : (i : ℕ) → i ≤ max → ℕ
+          prefixSum≤ 0 z≤n = c (0 , z≤n)
+          prefixSum≤ i@(suc i-1) i≤max@(s≤s i-1≤max) =
+              c (i , i≤max) + prefixSum≤ i-1 (≤-step i-1≤max)
 
         module _ {{_ : Eq I}} where
           op-DepRel = DepRel {I} op
+
+          module _ (i : I) (c : I → ℕ) where
+            postulate prefix-same : {i' n : ℕ} (i'≤max : i' ≤ max) (i'<i : i' < proj₁ i) → prefixSum≤ c unit i' i'≤max ≡ prefixSum≤ (substitute c i n) unit i' i'≤max
+
+            -- Lemma for recursing on prefixSum.
+            substituted-prefixSum-distinct : {i' : ℕ} (i'≤max : i' ≤ max) (i≤i' : proj₁ i ≤ i') →
+                  Σ[ n ∈ ℕ ] prefixSum≤ c unit i' i'≤max ≢ prefixSum≤ (substitute c i n) unit i' i'≤max
+            substituted-prefixSum-distinct z≤n z≤n with (proj₂ i) | c (0 , z≤n)
+            substituted-prefixSum-distinct z≤n z≤n | z≤n | n = suc n , λ()
+            substituted-prefixSum-distinct (s≤s i'≤max) i≤i' = {!   !}
 
           -- In Sum.op, `j` always depends on `i` .
           -- We prove this by computing a `yes _` for all `i`.
           op-DecidableDepRel : DecidableDepRel {I} op
           op-DecidableDepRel i unit = yes Dependent
             where
-            -- Lemma for recursing on prefixSum.
-            substituted-prefixSum-distinct :
-                  (i max' : I) (c : I → ℕ) (n n' : ℕ) → n ≢ n' →
-                  prefixSum c unit (Fin.toℕ max') max' ≢ prefixSum (substitute c i n') unit (Fin.toℕ max') max'
-            substituted-prefixSum-distinct i max' c n n' n≢n' = {!   !}
-
-            import Data.Fin.Properties as Finₚ
             Dependent : DepRel op i unit
-            Dependent c with c i
-            Dependent c | ℕ.zero with substituted-prefixSum-distinct i (Fin.fromℕ max) c 0 1 λ()
-            Dependent _ | _ | distinct rewrite Finₚ.toℕ-fromℕ max = 1 , distinct
-            Dependent c | ℕ.suc n with substituted-prefixSum-distinct i (Fin.fromℕ max) c (ℕ.suc n) 0 λ()
-            Dependent _ | _ | distinct rewrite Finₚ.toℕ-fromℕ max = 0 , distinct
+            Dependent c = substituted-prefixSum-distinct i c ≤-refl (proj₂ i)
 
-    egFinSum = Sum.op egFin
-    egFinSum-test : egFinSum unit ≡ 3
-    egFinSum-test = refl
+    -- egFinSum = Sum.op egFin
+    -- egFinSum-test : egFinSum unit ≡ 3
+    -- egFinSum-test = refl

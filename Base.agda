@@ -6,7 +6,7 @@ open import Data.Maybe using (just; nothing; fromMaybe) renaming (Maybe to ¿_) 
 module Maybe = Data.Maybe
 open import Data.Nat using (ℕ; _+_) public
 module Nat = Data.Nat
-open import Data.Product using (Σ; Σ-syntax; ∃; ∃₂; _×_; _,_) public
+open import Data.Product using (Σ; Σ-syntax; ∃; ∃₂; _×_; _,_; proj₁; proj₂) public
 open import Data.Empty using (⊥) public
 open import Function using (_∘_; _$_; id) public
 open import Relation.Binary using (Decidable) public
@@ -55,12 +55,15 @@ instance
   open import Data.Nat.Properties as NatProp
 
   natEq : Eq ℕ
-  Eq.eq? natEq ℕ.zero ℕ.zero = yes refl
-  Eq.eq? natEq ℕ.zero (ℕ.suc n₂) = no λ()
-  Eq.eq? natEq (ℕ.suc n₁) ℕ.zero = no λ()
-  Eq.eq? natEq (ℕ.suc n₁) (ℕ.suc n₂) with Eq.eq? natEq n₁ n₂
-  ... | no ¬eq = no λ eq-suc → ¬eq (NatProp.suc-injective eq-suc)
-  ... | yes eq = yes $ cong Nat.suc eq
+  Eq.eq? natEq = NatProp._≟_
+
+  sigmaEq : {A : Type} {{_ : Eq A}} {B : A → Type} {{_ : {a : A} → Eq (B a)}} → Eq (Σ A B)
+  Eq.eq? sigmaEq (a , b) (a' , b') with a == a'
+  Eq.eq? sigmaEq (a , b) (a' , b') | yes a=a' with a' | a=a'
+  Eq.eq? sigmaEq (a , b) (a' , b') | yes a=a' | .a | refl with b == b'
+  Eq.eq? sigmaEq (a , b) (a' , b') | yes a=a' | .a | refl | yes b=b' rewrite b=b' = yes refl
+  Eq.eq? sigmaEq (a , b) (a' , b') | yes a=a' | .a | refl | no ¬b=b' = no {!   !}
+  Eq.eq? sigmaEq (a , b) (a' , b') | no ¬p = {!   !}
 
 -- Readable syntax for `maybe`.
 _map_or_ : ∀ {a b} {A : Set a} {B : Set b} → ¿ A → (A → B) → B → B
