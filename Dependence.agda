@@ -1,12 +1,6 @@
 open import Base
 
--- Defines dependence relations in terms of operators between partial functions.
---
--- This is an attempt to work around the problems in the Dependence module,
--- where comparing elements across indexes within the output type family
--- (specifically, comparing `J c` with `J c-sub`) is problematic. Using partial
--- functions `I →? T` allows us to define a supertype to all indexes in the
--- output type family (where nonexistent terms are mapped to `nothing`).
+-- Defines dependence relations in terms of operators between non-dependent functions.
 module Dependence where
 
 -- DepRel definition.
